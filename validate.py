@@ -4,8 +4,6 @@ import click
 import sys
 from botocore.exceptions import ClientError
 
-# /Users/owainwilliams/Desktop/validation-code/cloudformation
-
 divider = '===================================================================='
 client = boto3.client('cloudformation')
 
@@ -24,10 +22,8 @@ def checkFiles(pathLocation):
             errors_[filename] = response
     return(errors_)
 
-
 @click.command()
 @click.option('--path', prompt='path', help='The path of the CloudFormation folder.')
-
 
 def main (path):
     path_mgmnt = '{}/{}'.format(path, 'mgmnt')
@@ -47,8 +43,6 @@ def main (path):
                 keys[i] + '\n' +
                 divider + '\n' +
                 values[i])
-
-
 
 if __name__ == '__main__':
     main()
