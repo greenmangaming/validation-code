@@ -19,17 +19,20 @@ def checkValidity(folder, filename):
 def checkFiles(pathLocation):
     errors_ = {}
     for filename in os.listdir(pathLocation):
-        if filename.endswith('.json'):
-            response = checkValidity(pathLocation, filename)
-            if response != None:
-                errors_[filename] = response
+        if not filename.endswith('.json'):
+            continue
+        response = checkValidity(pathLocation, filename)
+        if response != None:
+            errors_[filename] = response
     return(errors_)
 
 def upload(pathLocation, filename, s3Dir, s3Bucket):
     if not filename.endswith('.json'):
         return
-    s3Bucket.put_object(Key='gmg-interns/owainwi/{}/{}'.format(s3Dir, filename),
-                    Body=open('{}/{}'.format(pathLocation, filename), 'r').read())
+    s3Bucket.put_object(
+        Key='gmg-interns/owainwi/{}/{}'.format(s3Dir, filename),
+        Body=open('{}/{}'.format(pathLocation, filename), 'r'
+    ).read())
     print('{} uploaded to s3!'.format(filename))
 
 def uploadFiles(pathLocation, s3Dir):
@@ -40,33 +43,46 @@ def uploadFiles(pathLocation, s3Dir):
     for filename in os.listdir(pathLocation):
         filenames.append(filename)
     for fname in filenames:
-        t = threading.Thread(target = upload, args = (pathLocation, fname, s3Dir, s3Bucket)).start()
+        t = threading.Thread(
+            target = upload,
+            args = (pathLocation, fname, s3Dir, s3Bucket)
+        ).start()
 
 @click.command()
-@click.option('--path', prompt='Path', help='The Path of the CloudFormation folder.')
+@click.option(
+    '--path',
+    prompt='Path',
+    help='The Path of the CloudFormation folder.'
+)
 
 def main(path):
     path_mgmnt = '{}/{}'.format(path, 'mgmnt')
     path_prod = '{}/{}'.format(path, 'prod')
     path_staging = '{}/{}'.format(path, 'staging')
     errors = {}
-    if checkFiles(path_staging) != None:
-        errors.update(checkFiles(path_staging))
-    if checkFiles(path_prod) != None:
-        errors.update(checkFiles(path_prod))
-    if checkFiles(path_mgmnt) != None:
-        errors.update(checkFiles(path_mgmnt))
+
+    for pathCurrent in [path_mgmnt, path_prod, path_staging]:
+        errors.update(checkFiles(pathCurrent))
+
     keys = list(errors.keys())
     values = list(errors.values())
+
     for i in range(len(keys)):
         print(  divider + '\n' +
                 keys[i] + '\n' +
                 divider + '\n' +
                 values[i])
+
     if len(keys) == 0:
-        uploadFiles(path_mgmnt, 'mgmnt')
-        uploadFiles(path_prod, 'prod')
-        uploadFiles(path_staging, 'staging')
+
+        paths = [
+            [path_mgmnt, 'mgmnt'],
+            [path_prod, 'prod'],
+            [path_staging, 'staging']
+        ]
+
+        for val in paths:
+            uploadFiles(val[0], val[1])
         sys.exit()
     else:
         print('There were errors so the files could not be uploaded to s3.')
