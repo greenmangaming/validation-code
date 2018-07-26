@@ -4,15 +4,13 @@ import click
 import sys
 from botocore.exceptions import ClientError
 
-# s3://gmg-general-dev-test/gmg-interns/
-
 divider = '===================================================================='
 client = boto3.client('cloudformation')
 
 def checkValidity(folder, filename):
     json = open('{}/{}'.format(folder, filename), 'r').read()
     try:
-        response = client.validate_template(TemplateUrl=json)
+        response = client.validate_template(TemplateBody=json)
     except ClientError as e:
         return('\n{}\n'.format(e))
 
@@ -35,12 +33,12 @@ def uploadFiles(pathLocation):
         print('{} uploaded to s3!'.format(filename))
 
 @click.command()
-@click.option('--url', prompt='url', help='The url of the CloudFormation folder.')
+@click.option('--Path', prompt='Path', help='The Path of the CloudFormation folder.')
 
-def main (url):
-    path_mgmnt = '{}cloudformation/{}'.format(url, 'mgmnt')
-    path_prod = '{}cloudformation/{}'.format(url, 'prod')
-    path_staging = '{}cloudformation/{}'.format(url, 'staging')
+def main(path):
+    path_mgmnt = '{}/{}'.format(path, 'mgmnt')
+    path_prod = '{}/{}'.format(path, 'prod')
+    path_staging = '{}/{}'.format(path, 'staging')
     errors = {}
     if checkFiles(path_staging) != None:
         errors.update(checkFiles(path_staging))

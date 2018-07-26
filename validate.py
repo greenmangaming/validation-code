@@ -25,7 +25,7 @@ def checkFiles(pathLocation):
 @click.command()
 @click.option('--path', prompt='path', help='The path of the CloudFormation folder.')
 
-def main (path):
+def main(path):
     path_mgmnt = '{}/{}'.format(path, 'mgmnt')
     path_prod = '{}/{}'.format(path, 'prod')
     path_staging = '{}/{}'.format(path, 'staging')
@@ -43,6 +43,7 @@ def main (path):
                 keys[i] + '\n' +
                 divider + '\n' +
                 values[i])
+    sys.exit()
 
 if __name__ == '__main__':
     main()
