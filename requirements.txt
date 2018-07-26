@@ -3,3 +3,4 @@ os
 click
 sys
 botocore
+threading
