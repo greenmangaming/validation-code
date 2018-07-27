@@ -6,46 +6,49 @@ from botocore.exceptions import ClientError
 import threading
 
 
-divider = '===================================================================='
+divider = '=' * 70
 client = boto3.client('cloudformation')
 
-def checkValidity(folder, filename):
-    json = open('{}/{}'.format(folder, filename), 'r').read()
+def checkValidity(root, filename):
+    json = open('{}/{}'.format(root, filename), 'r').read()
     try:
         response = client.validate_template(TemplateBody=json)
     except ClientError as e:
         return('\n{}\n'.format(e))
 
-def checkFiles(pathLocation):
+def checkFiles(path):
     errors_ = {}
-    for filename in os.listdir(pathLocation):
-        if not filename.endswith('.json'):
-            continue
-        response = checkValidity(pathLocation, filename)
-        if response != None:
-            errors_[filename] = response
-    return(errors_)
+    paths = []
+    for root, dirs, files in os.walk(path):
+        paths.append(root)
+        for filename in os.listdir(root):
+            if not filename.endswith('.json'):
+                continue
+            response = checkValidity(root, filename)
+            if response != None:
+                errors_[filename] = response
+    return(errors_, paths)
 
-def upload(pathLocation, filename, s3Dir, s3Bucket):
+def upload(path, filename, s3Dir, s3Bucket):
     if not filename.endswith('.json'):
         return
     s3Bucket.put_object(
-        Key='gmg-interns/owainwi/{}/{}'.format(s3Dir, filename),
-        Body=open('{}/{}'.format(pathLocation, filename), 'r'
+        Key='{}/{}'.format(s3Dir, filename),
+        Body=open('{}/{}'.format(path, filename), 'r'
     ).read())
     print('{} uploaded to s3!'.format(filename))
 
-def uploadFiles(pathLocation, s3Dir):
+def uploadFiles(path, s3Dir):
     s3 = boto3.resource('s3')
     bucket = 'gmg-general-dev-test'
     s3Bucket = s3.Bucket(bucket)
     filenames = []
-    for filename in os.listdir(pathLocation):
+    for filename in os.listdir(path):
         filenames.append(filename)
     for fname in filenames:
         t = threading.Thread(
             target = upload,
-            args = (pathLocation, fname, s3Dir, s3Bucket)
+            args = (path, fname, s3Dir, s3Bucket)
         ).start()
 
 @click.command()
@@ -54,15 +57,21 @@ def uploadFiles(pathLocation, s3Dir):
     prompt='Path',
     help='The Path of the CloudFormation folder.'
 )
+@click.option(
+    '--dir',
+    prompt='Directory',
+    help='The Directory of the s3 folder.'
+)
 
-def main(path):
-    path_mgmnt = '{}/{}'.format(path, 'mgmnt')
-    path_prod = '{}/{}'.format(path, 'prod')
-    path_staging = '{}/{}'.format(path, 'staging')
+def main(path, dir):
     errors = {}
+    checkFilesRes = checkFiles(path)
 
-    for pathCurrent in [path_mgmnt, path_prod, path_staging]:
-        errors.update(checkFiles(pathCurrent))
+    if dir.endswith('/'):
+        dir = dir[:-1]
+    if dir.startswith('/'):
+        dir = dir[1:]
+    errors.update(checkFilesRes[0])
 
     keys = list(errors.keys())
     values = list(errors.values())
@@ -75,14 +84,10 @@ def main(path):
 
     if len(keys) == 0:
 
-        paths = [
-            [path_mgmnt, 'mgmnt'],
-            [path_prod, 'prod'],
-            [path_staging, 'staging']
-        ]
+        paths = checkFilesRes[1]
 
         for val in paths:
-            uploadFiles(val[0], val[1])
+            uploadFiles(val, dir)
         sys.exit()
     else:
         print('There were errors so the files could not be uploaded to s3.')
