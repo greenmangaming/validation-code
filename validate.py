@@ -42,14 +42,11 @@ def uploadFiles(path, s3Dir, orDir):
     s3 = boto3.resource('s3')
     bucket = 'gmg-general-dev-test'
     s3Bucket = s3.Bucket(bucket)
-    filenames = []
     subDir = path[len(orDir):]
     for filename in os.listdir(path):
-        filenames.append(filename)
-    for fname in filenames:
         t = threading.Thread(
             target = upload,
-            args = (path, fname, s3Dir, s3Bucket, subDir)
+            args = (path, filename, s3Dir, s3Bucket, subDir)
         ).start()
 
 @click.command()
