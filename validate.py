@@ -29,26 +29,27 @@ def checkFiles(path):
                 errors_[filename] = response
     return(errors_, paths)
 
-def upload(path, filename, s3Dir, s3Bucket):
+def upload(path, filename, s3Dir, s3Bucket, subDir):
     if not filename.endswith('.json'):
         return
     s3Bucket.put_object(
-        Key='{}/{}'.format(s3Dir, filename),
+        Key='{}{}/{}'.format(s3Dir, subDir, filename),
         Body=open('{}/{}'.format(path, filename), 'r'
     ).read())
     print('{} uploaded to s3!'.format(filename))
 
-def uploadFiles(path, s3Dir):
+def uploadFiles(path, s3Dir, orDir):
     s3 = boto3.resource('s3')
     bucket = 'gmg-general-dev-test'
     s3Bucket = s3.Bucket(bucket)
     filenames = []
+    subDir = path[len(orDir):]
     for filename in os.listdir(path):
         filenames.append(filename)
     for fname in filenames:
         t = threading.Thread(
             target = upload,
-            args = (path, fname, s3Dir, s3Bucket)
+            args = (path, fname, s3Dir, s3Bucket, subDir)
         ).start()
 
 @click.command()
@@ -87,7 +88,7 @@ def main(path, dir):
         paths = checkFilesRes[1]
 
         for val in paths:
-            uploadFiles(val, dir)
+            uploadFiles(val, dir, paths[0])
         sys.exit()
     else:
         print('There were errors so the files could not be uploaded to s3.')
